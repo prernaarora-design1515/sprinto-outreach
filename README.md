@@ -78,12 +78,12 @@ a small Flask version that reuses exactly the same pipeline code. Differences:
 - **Gmail sending is switched off** on Vercel, because the OAuth sign-in needs a local
   browser. Drafts are shown for review; send tests from the local Streamlit app.
 - SQLite lives in `/tmp`, so the History page is temporary.
-- **`APP_PASSWORD` is required.** Without it the app stays locked, so strangers can't
-  spend your API quota.
+- **The app is open to anyone with the link**, so assessors can test it. Every run uses
+  the Gemini key's quota. Setting `APP_PASSWORD` adds an optional login.
 
 Set the keys in **Vercel → Project → Settings → Environment Variables** (never in the repo):
-`APP_PASSWORD`, `GEMINI_API_KEY`, `LLM_PROVIDER=gemini`, `HUNTER_API_KEY` (optional),
-`APOLLO_API_KEY` (optional, not used yet). Then redeploy.
+`GEMINI_API_KEY`, `LLM_PROVIDER=gemini`, `HUNTER_API_KEY` (optional),
+`APOLLO_API_KEY` (optional, not used yet), `APP_PASSWORD` (optional login). Then redeploy.
 
 `requirements.txt` holds the packages Vercel needs; `requirements-local.txt` adds
 Streamlit, pandas and the Gmail libraries for local use.

@@ -46,7 +46,7 @@ GMAIL_TOKEN_FILE = _get("GMAIL_TOKEN_FILE", "token.json")
 # Vercel sets VERCEL=1. There the project folder is read-only, so SQLite lives in /tmp
 # (temporary: it is wiped whenever Vercel starts a fresh instance).
 ON_VERCEL = bool(os.getenv("VERCEL"))
-# Password for the web app (index.py). Required on Vercel so strangers can't use your API quota.
+# Optional password for the web app (index.py). Empty = open to anyone with the link.
 APP_PASSWORD = _get("APP_PASSWORD")
 
 # --- Storage ---

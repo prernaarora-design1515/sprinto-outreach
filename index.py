@@ -7,7 +7,8 @@ Differences from the local app, because Vercel runs short-lived serverless funct
   * Gmail sending is switched OFF here - the OAuth sign-in needs a local browser.
     Drafts are shown for review; send test emails from the local Streamlit app.
   * SQLite lives in /tmp and is temporary.
-  * A password (APP_PASSWORD) is required on Vercel so strangers can't spend your API quota.
+  * The app is open to anyone with the link (for the college submission). Setting
+    APP_PASSWORD adds an optional login.
 
 Local run:  python index.py   ->  http://localhost:5000
 """
@@ -32,10 +33,7 @@ app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax",
 
 # ------------------------------------------------------------------ access --
 def locked_reason():
-    """Why the app must refuse to run (empty string = OK)."""
-    if config.ON_VERCEL and not config.APP_PASSWORD:
-        return ("APP_PASSWORD is not set in the Vercel project settings. "
-                "The app stays locked so nobody can use your API keys.")
+    """Why the app must refuse to run (empty string = OK). The app is open by default."""
     return ""
 
 
