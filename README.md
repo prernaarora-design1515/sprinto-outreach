@@ -157,8 +157,9 @@ Supporting files:
   Pydantic validates the reply. The default model is `gemini-4-hydrogen`, which Google's
   docs recommend for new projects (Nov 2026); you can change it with `GEMINI_MODEL`.
   If that model is busy (HTTP 503/504), slow (no answer within `GEMINI_TIMEOUT_SECONDS`,
-  default 60) or out of quota (429), the app retries briefly and then switches to
-  `GEMINI_FALLBACK_MODELS` (default `gemini-3.1-flash-lite`) for the rest of the run.
+  default 30) or out of quota (429), the app retries briefly and then switches to
+  `GEMINI_FALLBACK_MODELS` (default `gemini-3.1-flash-lite`), skipping the failed model
+  for the next 10 minutes.
   This was added after `gemini-4-hydrogen` was overloaded during testing.
   Avoid `gemini-2.5-flash`: it is deprecated and Google re-routes it from 1 December 2026.
 - **Storage.** SQLite (`outreach.db`) keeps every run, page, finding (with quote,
@@ -243,7 +244,7 @@ professor's rules.
 | Gemini API | ✅ full research + email draft run live (LedgerLoop → QUALIFIED A), with automatic fallback when the main model was overloaded. Request format, error handling and provider switch are also unit-tested |
 | Hunter.io | ⚠️ key authenticates live, but the free monthly quota is used up (resets 3 Dec 2026), so the app shows a quota error. Response parsing is tested with a sample payload |
 | Apollo.io | ⚠️ key checked live (health endpoint). **Not wired into the app**: the free plan locks the people search and email endpoints |
-| Vercel deployment | ✅ builds from GitHub `main`; the page and `/health` respond |
+| Vercel deployment | ✅ live runs on 19 Nov 2026: LedgerLoop demo → QUALIFIED A with draft (15 verified findings); postman.com → DISQUALIFIED (already certified: ISO 27001, SOC 2 Type II…). Sending is off online |
 | Resend | ✅ **sent live** on 19 Nov 2026: LedgerLoop demo draft, after approval, to the student's own inbox only, and delivery was confirmed (mock prospect not emailed). Safety rules also tested with a fake HTTP client (5 tests) |
 | Gmail | ⚠️ safety rules tested with a fake Gmail service. **Not tested live**: the OAuth consent screen could not be created on the school's Google account |
 

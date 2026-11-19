@@ -111,10 +111,12 @@ class GeminiRetries(unittest.TestCase):
     def setUp(self):
         import gemini_llm
         self._waits, gemini_llm.RETRY_WAITS = gemini_llm.RETRY_WAITS, (0, 0)
+        gemini_llm._failed_at.clear()
 
     def tearDown(self):
         import gemini_llm
         gemini_llm.RETRY_WAITS = self._waits
+        gemini_llm._failed_at.clear()
 
     def _llm(self, failures):
         resp = SimpleNamespace(text=NextPageChoice(decision="stop", url="", purpose="none",

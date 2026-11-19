@@ -20,6 +20,16 @@ from llm import (EMAIL_SYSTEM, NEXT_PAGE_SYSTEM, RESEARCH_SYSTEM, LLMError, emai
 from schemas import CompanyResearch, EmailDraftOutput, NextPageChoice
 
 RETRY_WAITS = (2, 5)
+SKIP_FAILED_MODEL_SECONDS = 600   # after a model fails, skip it for 10 minutes (across runs)
+_failed_at = {}                   # model name -> time it last failed
+
+
+def _mark_failed(model):
+    _failed_at[model] = time.time()
+
+
+def _recently_failed(model):
+    return time.time() - _failed_at.get(model, 0) < SKIP_FAILED_MODEL_SECONDS
 
 
 def _is_timeout(exc):
@@ -61,7 +71,6 @@ class GeminiLLM:
             http_options=types.HttpOptions(timeout=config.GEMINI_TIMEOUT_SECONDS * 1000))
         self.model = config.GEMINI_MODEL
         self.model_used = None
-        self._skip = set()   # models that failed during this run - don't waste time on them again
 
     def _generate_with_retry(self, user_text, cfg):
         """
@@ -70,7 +79,7 @@ class GeminiLLM:
         self.model_used records which model actually answered.
         """
         models = [self.model] + [m for m in config.GEMINI_FALLBACK_MODELS if m != self.model]
-        models = [m for m in models if m not in self._skip] or models[-1:]
+        models = [m for m in models if not _recently_failed(m)] or models[-1:]
         for i, model in enumerate(models):
             last_model = i == len(models) - 1
             for wait in (*RETRY_WAITS, None):
@@ -86,7 +95,7 @@ class GeminiLLM:
                     if wait is None or quota_used_up:
                         if last_model:
                             raise
-                        self._skip.add(model)
+                        _mark_failed(model)
                         break                      # move on to the next model
                     time.sleep(wait)
                 except Exception as e:
@@ -95,7 +104,7 @@ class GeminiLLM:
                     if last_model:
                         raise LLMError(f"Gemini did not answer within {config.GEMINI_TIMEOUT_SECONDS} "
                                        "seconds (servers overloaded). Try again later.")
-                    self._skip.add(model)
+                    _mark_failed(model)
                     break                          # too slow: go straight to the next model
 
     def _ask(self, system, user_text, schema, max_tokens=16000):
