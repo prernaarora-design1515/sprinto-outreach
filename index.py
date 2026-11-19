@@ -19,6 +19,7 @@ from contextlib import closing
 
 from flask import Flask, redirect, render_template_string, request, session, url_for
 
+import blob_db
 import config
 import db
 from demo_sites import DEMO_COMPANIES, DemoFetcher
@@ -99,11 +100,21 @@ def run():
     error, research, outreach = "", None, None
     try:
         llm = get_llm()
+        # Run first, save afterwards: the saved history is loaded right before writing, so
+        # another visitor's run that finished in the meantime is kept (Vercel Blob).
+        research, _ = run_research(url, llm=llm, fetch=fetch)
+        if form.get("outreach"):
+            outreach = run_outreach(research, llm=llm,
+                                    allow_manual_review=bool(form.get("approve_review")))
+        blob_db.pull()
         with closing(db.connect()) as conn:
-            research, run_id = run_research(url, llm=llm, fetch=fetch, conn=conn)
-            if form.get("outreach"):
-                outreach = run_outreach(research, llm=llm, run_id=run_id, conn=conn,
-                                        allow_manual_review=bool(form.get("approve_review")))
+            run_id = db.save_research(conn, research)
+            if outreach and outreach.get("contacts") is not None and "chosen" in outreach:
+                chosen = outreach["chosen"]
+                db.save_contacts(conn, run_id, outreach["contacts"], chosen.email if chosen else None)
+            if outreach and outreach.get("email"):
+                outreach["email_id"] = db.save_email(conn, run_id, outreach["email"])
+        blob_db.push()                     # save this run for the History page
     except LLMError as e:
         error = f"AI error: {e}"
     except Exception as e:  # show a readable message instead of a blank 500 page
@@ -123,9 +134,11 @@ def history():
     blocked = guard()
     if blocked:
         return blocked
+    storage = blob_db.pull()
     with closing(db.connect()) as conn:
         runs = db.list_runs(conn)
-    return render_template_string(PAGE, view="history", runs=runs, **common())
+    return render_template_string(PAGE, view="history", runs=runs, storage=storage,
+                                  persistent=blob_db.enabled(), **common())
 
 
 @app.route("/health")

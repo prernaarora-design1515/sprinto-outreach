@@ -13,3 +13,4 @@ pydantic>=2.0
 # Web app for Vercel, configuration (SQLite is built into Python)
 flask>=3.0
 python-dotenv>=1.0
+vercel-blob>=0.6         # keeps the SQLite file between Vercel requests (blob_db.py)

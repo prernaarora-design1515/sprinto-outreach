@@ -92,7 +92,9 @@ a small Flask version that reuses exactly the same pipeline code. Differences:
 - Research and outreach run in **one request**, up to 300 seconds (`vercel.json`).
 - **Gmail sending is switched off** on Vercel, because the OAuth sign-in needs a local
   browser. Drafts are shown for review; send tests from the local Streamlit app.
-- SQLite lives in `/tmp`, so the History page is temporary.
+- SQLite lives in `/tmp`. To keep History between visits, connect a **Vercel Blob** store
+  to the project (Storage → Create → Blob). `blob_db.py` then loads the SQLite file before
+  saving a run and uploads it afterwards. Without a Blob store, History is temporary.
 - **The app is open to anyone with the link**, so assessors can test it. Every run uses
   the Gemini key's quota. Setting `APP_PASSWORD` adds an optional login.
 
@@ -246,7 +248,7 @@ professor's rules.
 | Area | Status |
 |---|---|
 | Scraper on real sites (Stripe, Chargebee, Postman; Sprinto → 403) | ✅ tested live |
-| Evidence Map rules, quote verification, agent limits, storage | ✅ 54 offline unit tests (`python -m unittest discover -s tests -t .`) |
+| Evidence Map rules, quote verification, agent limits, storage | ✅ 57 offline unit tests (`python -m unittest discover -s tests -t .`) |
 | Agent loop on real sites with the **mock** AI | ✅ ran (Chargebee, Postman) |
 | Claude API | ⚠️ request format checked with a fake client only. **Not tested live**: no `ANTHROPIC_API_KEY` |
 | Gemini API | ✅ full research + email draft run live (LedgerLoop → QUALIFIED A), with automatic fallback when the main model was overloaded. Request format, error handling and provider switch are also unit-tested |

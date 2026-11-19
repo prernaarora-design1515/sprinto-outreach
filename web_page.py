@@ -288,7 +288,8 @@ Evidence Map: certified → disqualify · not B2B SaaS → disqualify, unclear �
 {% elif view == 'history' %}
 <div class="eyebrow reveal"><span class="num">H</span>Saved runs</div>
 <div class="card reveal"><h2>Recent runs</h2>
-{% if on_vercel %}<p class="mute">On Vercel this history is temporary: it is wiped when Vercel starts a fresh server instance.</p>{% endif %}
+{% if on_vercel and persistent %}<p class="mute">Saved in SQLite and kept between visits with Vercel Blob storage{% if storage and storage not in ('loaded',) %} ({{ storage }}){% endif %}.</p>
+{% elif on_vercel %}<p class="mute">History is temporary here: no Vercel Blob store is connected, so it is wiped when Vercel starts a fresh server.</p>{% endif %}
 {% if runs %}<div class="scroll"><table><thead><tr>{% for k in runs[0].keys() %}<th>{{ k }}</th>{% endfor %}</tr></thead><tbody>
 {% for r in runs %}<tr>{% for v in r.values() %}<td>{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
 {% else %}<p>No runs saved yet.</p>{% endif %}</div>
