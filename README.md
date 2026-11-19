@@ -1,17 +1,24 @@
 # Sprinto Cold Outreach at Scale
 
-Mesa School of Business – AI assignment. A Python + Streamlit app that researches a
-company website, qualifies it using the professor's **Evidence Map**, finds a
-decision-maker, drafts a personalised email, and sends it **as a test to your own
-inbox only**.
+Mesa School of Business – AI assignment. A Python app that researches a company
+website, qualifies it using the professor's **Evidence Map**, finds a decision-maker,
+drafts a personalised email, and sends it **as a test to your own inbox only**.
 
-> **Current status:** everything runs in **mock mode** until you add credentials.
-> Claude, Gemini, Hunter.io and Gmail have **not** been tested live, because no keys
-> have been configured yet. All 43 automated tests run offline.
+**Live demo:** https://sprinto-outreach-lac.vercel.app. Open to anyone; no login.
+Pick a demo company or enter a real website. Email sending is switched off online.
+
+> **Two interfaces, one pipeline:**
+> - `streamlit_app.py` is the full local app (Streamlit), including the approved Gmail
+>   test send.
+> - `index.py` is a Flask version for Vercel, because Vercel can't host Streamlit. It
+>   shows research and drafts but never sends email.
 >
-> **AI provider:** the brief specifies the Claude API. Gemini was added as an
-> alternative because getting Claude access was slow. Choose one with `LLM_PROVIDER` in
-> `.env`. Both use the same prompts, schemas, quote verification and Evidence Map code.
+> **AI provider:** the brief specifies the Claude API. Gemini is used in the live demo
+> because getting Claude access was slow. Choose one with `LLM_PROVIDER`. Both use the
+> same prompts, schemas, quote verification and Evidence Map code.
+>
+> Without keys, everything falls back to clearly labelled **mock** mode. Section 6
+> lists exactly what has and hasn't been tested live.
 
 ---
 
@@ -219,11 +226,13 @@ professor's rules.
 | Area | Status |
 |---|---|
 | Scraper on real sites (Stripe, Chargebee, Postman; Sprinto → 403) | ✅ tested live |
-| Evidence Map rules, quote verification, agent limits, storage | ✅ 43 offline unit tests |
+| Evidence Map rules, quote verification, agent limits, storage | ✅ 43 offline unit tests (`python -m unittest discover -s tests -t .`) |
 | Agent loop on real sites with the **mock** AI | ✅ ran (Chargebee, Postman) |
-| Claude API | ⚠️ request format checked with a fake client only. **Not tested live**: needs `ANTHROPIC_API_KEY` |
-| Gemini API | ⚠️ request format, error handling and provider switch checked with a fake client only. **Not tested live**: needs `GEMINI_API_KEY` |
-| Hunter.io | ⚠️ response parsing tested with a sample payload. **Not tested live**: needs `HUNTER_API_KEY` |
+| Claude API | ⚠️ request format checked with a fake client only. **Not tested live**: no `ANTHROPIC_API_KEY` |
+| Gemini API | ✅ key and model checked live; one structured test call succeeded. Request format, error handling and provider switch are also unit-tested |
+| Hunter.io | ⚠️ key authenticates live, but the free monthly quota is used up (resets 3 Dec 2026), so the app shows a quota error. Response parsing is tested with a sample payload |
+| Apollo.io | ⚠️ key checked live (health endpoint). **Not wired into the app**: the free plan locks the people search and email endpoints |
+| Vercel deployment | ✅ builds from GitHub `main`; the page and `/health` respond |
 | Gmail | ⚠️ safety rules tested with a fake Gmail service. **Not tested live**: needs OAuth setup and your approval |
 
 ---
