@@ -244,7 +244,7 @@ professor's rules.
 | Hunter.io | ⚠️ key authenticates live, but the free monthly quota is used up (resets 3 Dec 2026), so the app shows a quota error. Response parsing is tested with a sample payload |
 | Apollo.io | ⚠️ key checked live (health endpoint). **Not wired into the app**: the free plan locks the people search and email endpoints |
 | Vercel deployment | ✅ builds from GitHub `main`; the page and `/health` respond |
-| Resend | ✅ **sent live** on 19 Nov 2026: LedgerLoop demo draft, after approval, to the student's own inbox only (mock prospect not emailed). Safety rules also tested with a fake HTTP client (5 tests) |
+| Resend | ✅ **sent live** on 19 Nov 2026: LedgerLoop demo draft, after approval, to the student's own inbox only, and delivery was confirmed (mock prospect not emailed). Safety rules also tested with a fake HTTP client (5 tests) |
 | Gmail | ⚠️ safety rules tested with a fake Gmail service. **Not tested live**: the OAuth consent screen could not be created on the school's Google account |
 
 ---
