@@ -134,7 +134,8 @@ def choose_decision_maker(contacts):
 
 def find_contacts(domain):
     """Returns dict: contacts, chosen, reason, mode, error."""
-    if not config.use_hunter():
+    # Fictional demo companies (*.example) have no real people, so never ask Hunter about them.
+    if not config.use_hunter() or domain.lower().rstrip(".").endswith(".example"):
         contacts = mock_contacts(domain)
         chosen, reason = choose_decision_maker(contacts)
         return {"contacts": contacts, "chosen": chosen, "reason": "[MOCK] " + reason,

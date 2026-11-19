@@ -94,5 +94,84 @@ class ProviderSelection(unittest.TestCase):
             self.assertEqual(get_llm().mode, "gemini")
 
 
+class FlakyModels:
+    """Fails with 503 a set number of times, then answers."""
+    def __init__(self, failures, response):
+        self.failures, self.response, self.calls = failures, response, 0
+
+    def generate_content(self, **kwargs):
+        self.calls += 1
+        if self.calls <= self.failures:
+            raise errors.ServerError(503, {"error": {"code": 503, "message": "overloaded",
+                                                     "status": "UNAVAILABLE"}})
+        return self.response
+
+
+class GeminiRetries(unittest.TestCase):
+    def setUp(self):
+        import gemini_llm
+        self._waits, gemini_llm.RETRY_WAITS = gemini_llm.RETRY_WAITS, (0, 0)
+
+    def tearDown(self):
+        import gemini_llm
+        gemini_llm.RETRY_WAITS = self._waits
+
+    def _llm(self, failures):
+        resp = SimpleNamespace(text=NextPageChoice(decision="stop", url="", purpose="none",
+                                                   reason="ok").model_dump_json(),
+                               prompt_feedback=SimpleNamespace(block_reason=None),
+                               candidates=[SimpleNamespace(finish_reason=types.FinishReason.STOP)])
+        models = FlakyModels(failures, resp)
+        return GeminiLLM(client=SimpleNamespace(models=models)), models
+
+    def test_busy_server_is_retried(self):
+        llm, models = self._llm(failures=2)
+        self.assertEqual(llm._ask("s", "u", NextPageChoice).decision, "stop")
+        self.assertEqual(models.calls, 3)
+        self.assertEqual(llm.model_used, llm.model)
+
+    def test_gives_up_after_retries_and_fallbacks(self):
+        import config
+        from unittest import mock
+        llm, models = self._llm(failures=100)
+        with mock.patch.object(config, "GEMINI_FALLBACK_MODELS", ["backup-model"]):
+            with self.assertRaises(LLMError):
+                llm._ask("s", "u", NextPageChoice)
+        self.assertEqual(models.calls, 6)        # 3 tries on the main model + 3 on the backup
+
+    def test_slow_main_model_falls_back(self):
+        import config
+        from unittest import mock
+        llm, models = self._llm(failures=0)
+        real = models.generate_content
+        def slow_first(**kw):
+            if kw["model"] == llm.model:
+                raise type("ReadTimeout", (Exception,), {})("too slow")
+            return real(**kw)
+        models.generate_content = slow_first
+        with mock.patch.object(config, "GEMINI_FALLBACK_MODELS", ["backup-model"]):
+            self.assertEqual(llm._ask("s", "u", NextPageChoice).decision, "stop")
+        self.assertEqual(llm.model_used, "backup-model")
+
+    def test_failed_model_is_skipped_for_the_rest_of_the_run(self):
+        import config
+        from unittest import mock
+        llm, models = self._llm(failures=3)      # main model fails 3 times, then would work
+        with mock.patch.object(config, "GEMINI_FALLBACK_MODELS", ["backup-model"]):
+            llm._ask("s", "u", NextPageChoice)
+            calls_before = models.calls
+            llm._ask("s", "u", NextPageChoice)
+        self.assertEqual(models.calls - calls_before, 1)   # went straight to the backup
+        self.assertEqual(llm.model_used, "backup-model")
+
+    def test_busy_main_model_falls_back(self):
+        import config
+        from unittest import mock
+        llm, models = self._llm(failures=3)      # main model busy on all 3 tries
+        with mock.patch.object(config, "GEMINI_FALLBACK_MODELS", ["backup-model"]):
+            self.assertEqual(llm._ask("s", "u", NextPageChoice).decision, "stop")
+        self.assertEqual(llm.model_used, "backup-model")
+
+
 if __name__ == "__main__":
     unittest.main()

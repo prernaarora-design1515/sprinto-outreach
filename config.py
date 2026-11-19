@@ -30,6 +30,10 @@ CLAUDE_EFFORT = _get("CLAUDE_EFFORT", "medium")      # low | medium | high
 # --- Google Gemini API (alternative to Claude) ---
 GEMINI_API_KEY = _get("GEMINI_API_KEY")
 GEMINI_MODEL = _get("GEMINI_MODEL", "gemini-4-hydrogen")
+# Used in order when the main model stays busy (503/429) after retries.
+GEMINI_FALLBACK_MODELS = [m.strip() for m in
+                          _get("GEMINI_FALLBACK_MODELS", "gemini-3.1-flash-lite").split(",") if m.strip()]
+GEMINI_TIMEOUT_SECONDS = int(_get("GEMINI_TIMEOUT_SECONDS", "60"))   # per AI call
 
 # --- Hunter.io (contact finding) ---
 HUNTER_API_KEY = _get("HUNTER_API_KEY")

@@ -156,7 +156,10 @@ Supporting files:
   `generate_content` with our Pydantic schema sent as `response_json_schema`, and
   Pydantic validates the reply. The default model is `gemini-4-hydrogen`, which Google's
   docs recommend for new projects (Nov 2026); you can change it with `GEMINI_MODEL`.
-  If that model is unavailable on your plan, try a stable one such as `gemini-3.8-flash`.
+  If that model is busy (HTTP 503/504), slow (no answer within `GEMINI_TIMEOUT_SECONDS`,
+  default 60) or out of quota (429), the app retries briefly and then switches to
+  `GEMINI_FALLBACK_MODELS` (default `gemini-3.1-flash-lite`) for the rest of the run.
+  This was added after `gemini-4-hydrogen` was overloaded during testing.
   Avoid `gemini-2.5-flash`: it is deprecated and Google re-routes it from 1 December 2026.
 - **Storage.** SQLite (`outreach.db`) keeps every run, page, finding (with quote,
   source, fact/inference, confidence, verified), agent step, contact and email draft.
@@ -234,7 +237,7 @@ professor's rules.
 | Area | Status |
 |---|---|
 | Scraper on real sites (Stripe, Chargebee, Postman; Sprinto → 403) | ✅ tested live |
-| Evidence Map rules, quote verification, agent limits, storage | ✅ 48 offline unit tests (`python -m unittest discover -s tests -t .`) |
+| Evidence Map rules, quote verification, agent limits, storage | ✅ 56 offline unit tests (`python -m unittest discover -s tests -t .`) |
 | Agent loop on real sites with the **mock** AI | ✅ ran (Chargebee, Postman) |
 | Claude API | ⚠️ request format checked with a fake client only. **Not tested live**: no `ANTHROPIC_API_KEY` |
 | Gemini API | ✅ key and model checked live; one structured test call succeeded. Request format, error handling and provider switch are also unit-tested |

@@ -8,6 +8,8 @@ How the structured answer is enforced:
   Pydantic. If it doesn't match, we raise LLMError instead of guessing.
 """
 
+import time
+
 from google import genai
 from google.genai import errors, types
 from pydantic import ValidationError
@@ -16,6 +18,13 @@ import config
 from llm import (EMAIL_SYSTEM, NEXT_PAGE_SYSTEM, RESEARCH_SYSTEM, LLMError, email_user_text,
                  next_page_user_text, research_user_text)
 from schemas import CompanyResearch, EmailDraftOutput, NextPageChoice
+
+RETRY_WAITS = (2, 5)
+
+
+def _is_timeout(exc):
+    """True for the HTTP library's timeout errors (ReadTimeout, ConnectTimeout, ...)."""
+    return any("Timeout" in cls.__name__ for cls in type(exc).__mro__)   # seconds to wait before each retry of a busy (503/429) Gemini
 
 _BLOCKED = {"SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "RECITATION", "SPII", "MODEL_ARMOR"}
 
@@ -45,8 +54,49 @@ class GeminiLLM:
 
     def __init__(self, client=None):
         # `client` can be swapped for a fake in tests.
-        self.client = client or genai.Client(api_key=config.GEMINI_API_KEY)
+        # A per-call time limit, so a very slow (overloaded) model makes us move on to the
+        # fallback instead of hanging until Vercel's 300-second function limit.
+        self.client = client or genai.Client(
+            api_key=config.GEMINI_API_KEY,
+            http_options=types.HttpOptions(timeout=config.GEMINI_TIMEOUT_SECONDS * 1000))
         self.model = config.GEMINI_MODEL
+        self.model_used = None
+        self._skip = set()   # models that failed during this run - don't waste time on them again
+
+    def _generate_with_retry(self, user_text, cfg):
+        """
+        Gemini sometimes answers 503 (busy) or 429 (briefly rate limited). Wait and retry;
+        if the main model stays busy, try the fallback models (GEMINI_FALLBACK_MODELS).
+        self.model_used records which model actually answered.
+        """
+        models = [self.model] + [m for m in config.GEMINI_FALLBACK_MODELS if m != self.model]
+        models = [m for m in models if m not in self._skip] or models[-1:]
+        for i, model in enumerate(models):
+            last_model = i == len(models) - 1
+            for wait in (*RETRY_WAITS, None):
+                try:
+                    response = self.client.models.generate_content(
+                        model=model, contents=user_text, config=cfg)
+                    self.model_used = model
+                    return response
+                except errors.APIError as e:
+                    if e.code not in (429, 500, 502, 503, 504):
+                        raise
+                    quota_used_up = e.code == 429 and "quota" in str(e.message or "").lower()
+                    if wait is None or quota_used_up:
+                        if last_model:
+                            raise
+                        self._skip.add(model)
+                        break                      # move on to the next model
+                    time.sleep(wait)
+                except Exception as e:
+                    if not _is_timeout(e):
+                        raise
+                    if last_model:
+                        raise LLMError(f"Gemini did not answer within {config.GEMINI_TIMEOUT_SECONDS} "
+                                       "seconds (servers overloaded). Try again later.")
+                    self._skip.add(model)
+                    break                          # too slow: go straight to the next model
 
     def _ask(self, system, user_text, schema, max_tokens=16000):
         cfg = types.GenerateContentConfig(
@@ -56,8 +106,7 @@ class GeminiLLM:
             max_output_tokens=max_tokens,
         )
         try:
-            response = self.client.models.generate_content(
-                model=self.model, contents=user_text, config=cfg)
+            response = self._generate_with_retry(user_text, cfg)
         except errors.ClientError as e:            # 4xx - our request or key is the problem
             msg = str(e.message or e)
             if config.GEMINI_API_KEY:                 # never show the key itself

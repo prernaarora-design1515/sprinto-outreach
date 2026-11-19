@@ -117,5 +117,17 @@ class EmailTests(unittest.TestCase):
         self.assertEqual(d.body, "")
 
 
+
+class DemoDomainsNeverUseHunter(unittest.TestCase):
+    def test_example_domain_gets_mock_contacts_even_with_a_key(self):
+        from unittest import mock
+        import config
+        from contacts import find_contacts
+        with mock.patch.object(config, "HUNTER_API_KEY", "fake"),              mock.patch("contacts.hunter_domain_search", side_effect=AssertionError("Hunter called")):
+            out = find_contacts("pipelinehq.example")
+        self.assertEqual(out["mode"], "mock")
+        self.assertIsNotNone(out["chosen"])
+
+
 if __name__ == "__main__":
     unittest.main()
