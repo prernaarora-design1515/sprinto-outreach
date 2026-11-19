@@ -123,6 +123,9 @@ Supporting files:
 - `pipeline.py`: connects the steps and runs from the command line.
 - `streamlit_app.py`: the Streamlit interface (local).
 - `index.py`: the Flask web interface used on Vercel.
+- `web_page.py`: its page design. Dark by default with a light toggle, hover effects,
+  motion (animated orb, scroll reveals) and optional interface sounds made with the Web
+  Audio API. It respects "reduce motion" settings and changes no behaviour.
 - `mock_llm.py`: the rule-based stand-in for Claude.
 - `demo_sites.py`: the fictional test companies.
 - `tests/`: the automated tests.
