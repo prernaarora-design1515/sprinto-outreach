@@ -60,8 +60,11 @@ class GeminiLLM:
                 model=self.model, contents=user_text, config=cfg)
         except errors.ClientError as e:            # 4xx - our request or key is the problem
             msg = str(e.message or e)
+            if config.GEMINI_API_KEY:                 # never show the key itself
+                msg = msg.replace(config.GEMINI_API_KEY, "***")
             if "API key" in msg or e.code in (401, 403):
-                raise LLMError("Gemini API key was rejected. Check GEMINI_API_KEY in .env.")
+                raise LLMError(f"Gemini API key was rejected (HTTP {e.code}: {msg[:200]}). "
+                               "Check GEMINI_API_KEY in .env or in the Vercel settings.")
             if e.code == 429:
                 raise LLMError("Gemini rate limit or free-tier quota reached. Wait and try again.")
             if e.code == 404:

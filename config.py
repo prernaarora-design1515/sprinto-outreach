@@ -13,7 +13,8 @@ load_dotenv()  # reads .env in the project folder (if it exists)
 
 
 def _get(name, default=""):
-    return os.getenv(name, default).strip()
+    # strip spaces and accidental surrounding quotes (a common copy-paste mistake)
+    return os.getenv(name, default).strip().strip('"').strip("'").strip()
 
 
 # --- AI provider: auto | claude | gemini | mock ---
