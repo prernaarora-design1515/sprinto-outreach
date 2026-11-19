@@ -161,7 +161,7 @@ Supporting files:
   docs recommend for new projects (Nov 2026); you can change it with `GEMINI_MODEL`.
   If that model is busy (HTTP 503/504), slow (no answer within `GEMINI_TIMEOUT_SECONDS`,
   default 30) or out of quota (429), the app retries briefly and then switches to
-  `GEMINI_FALLBACK_MODELS` (default `gemini-3.1-flash-lite`), skipping the failed model
+  `GEMINI_FALLBACK_MODELS` (default `gemini-3.1-flash-lite`, then `gemini-3.5-flash-lite`), skipping the failed model
   for the next 10 minutes.
   This was added after `gemini-4-hydrogen` was overloaded during testing.
   Avoid `gemini-2.5-flash`: it is deprecated and Google re-routes it from 1 December 2026.
