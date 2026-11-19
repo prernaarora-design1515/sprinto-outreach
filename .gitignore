@@ -1,0 +1,18 @@
+# Secrets - never commit
+.env
+credentials.json
+token.json
+
+# Local data
+outreach.db
+*.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.streamlit/secrets.toml
+
+# Vercel and scratch output
+.vercel/
+*_output.txt

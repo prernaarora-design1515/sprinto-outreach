@@ -1,0 +1,15 @@
+# Core packages - used by BOTH the Vercel web app (index.py) and the local app.
+# Vercel installs this file. Local-only extras are in requirements-local.txt.
+
+# Milestone 1 - scraping
+requests>=2.31
+beautifulsoup4>=4.12
+
+# Milestones 2-4 - AI extraction, decisions, email writing
+anthropic>=2.10          # Claude (option 1)
+google-genai>=3.6        # Gemini (option 2)
+pydantic>=2.0
+
+# Web app for Vercel, configuration (SQLite is built into Python)
+flask>=3.0
+python-dotenv>=1.0

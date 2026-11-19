@@ -1,0 +1,15 @@
+# Everything for running on your own computer:
+#   pip install --user -r requirements-local.txt
+-r requirements.txt
+
+# Streamlit interface (streamlit_app.py) - not used on Vercel
+streamlit>=1.40
+pandas>=2.0
+
+# Milestone 5 - Gmail API test send (local only: OAuth needs a browser)
+google-api-python-client>=2.100
+google-auth-oauthlib>=1.2
+
+# Optional fallback for JavaScript-heavy sites (only install if needed):
+#   pip install playwright
+#   python -m playwright install chromium
