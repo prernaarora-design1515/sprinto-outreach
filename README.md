@@ -240,11 +240,11 @@ professor's rules.
 | Evidence Map rules, quote verification, agent limits, storage | ✅ 54 offline unit tests (`python -m unittest discover -s tests -t .`) |
 | Agent loop on real sites with the **mock** AI | ✅ ran (Chargebee, Postman) |
 | Claude API | ⚠️ request format checked with a fake client only. **Not tested live**: no `ANTHROPIC_API_KEY` |
-| Gemini API | ✅ key and model checked live; one structured test call succeeded. Request format, error handling and provider switch are also unit-tested |
+| Gemini API | ✅ full research + email draft run live (LedgerLoop → QUALIFIED A), with automatic fallback when the main model was overloaded. Request format, error handling and provider switch are also unit-tested |
 | Hunter.io | ⚠️ key authenticates live, but the free monthly quota is used up (resets 3 Dec 2026), so the app shows a quota error. Response parsing is tested with a sample payload |
 | Apollo.io | ⚠️ key checked live (health endpoint). **Not wired into the app**: the free plan locks the people search and email endpoints |
 | Vercel deployment | ✅ builds from GitHub `main`; the page and `/health` respond |
-| Resend | ⚠️ safety rules tested with a fake HTTP client (5 tests). **Not tested live yet** |
+| Resend | ✅ **sent live** on 19 Nov 2026: LedgerLoop demo draft, after approval, to the student's own inbox only (mock prospect not emailed). Safety rules also tested with a fake HTTP client (5 tests) |
 | Gmail | ⚠️ safety rules tested with a fake Gmail service. **Not tested live**: the OAuth consent screen could not be created on the school's Google account |
 
 ---
