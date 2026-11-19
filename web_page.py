@@ -352,7 +352,10 @@ footer{position:relative;z-index:1;border-top:1px solid var(--line);margin-top:7
 {% elif view == 'result' %}
 {% if error %}<div class="box bad reveal">{{ error }}</div>{% endif %}
 {% if lookup and lookup.url %}<div class="banner reveal">🔎 <span>Found <b>{{ lookup.name }}</b> at <a href="{{ lookup.url }}" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">{{ lookup.url|replace('https://','') }}</a></span>
-<span class="mute">verified: {{ lookup.reason }}</span>{% if lookup.alternatives %}<span class="mute">· also: {{ lookup.alternatives|join(', ') }}</span>{% endif %}</div>{% endif %}
+<span class="mute">verified: {{ lookup.reason }}</span>{% if lookup.alternatives %}<span class="mute">· also: {{ lookup.alternatives|join(', ') }}</span>{% endif %}
+<span class="mute">· Not the right company? Search again with its exact website.</span></div>
+<details class="reveal" style="margin:-4px 0 14px"><summary>Sites checked ({{ lookup.tried|length }})</summary>
+{% for t in lookup.tried %}<div class="mute" style="font-size:12.5px"><span class="tag {{ 'yes' if t.ok else '' }}">{{ '✓' if t.ok else '✕' }}</span> {{ t.url|replace('https://','') }} — {{ t.reason or 'verified' }}</div>{% endfor %}</details>{% endif %}
 {% if research and info %}{% set d = research.decision %}
 <section class="verdict reveal {{ {'QUALIFIED':'ok','DISQUALIFIED':'bad'}.get(d.status,'warn') }}">
   <div class="vtop">

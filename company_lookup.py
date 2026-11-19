@@ -109,7 +109,9 @@ def find_company(name, llm=None, fetch=scrape):
     with ThreadPoolExecutor(max_workers=8) as pool:
         results = list(pool.map(lambda u: (u, *verify(u, proper if proper else name, fetch)), ordered))
     verified = [r for r in results if r[1]]
-    tried = [{"url": u, "ok": ok, "reason": why} for u, ok, _t, why in results]
+    ai_urls = {u for u, _ in ai}
+    tried = [{"url": u, "ok": ok, "reason": why + (" (AI suggestion)" if u in ai_urls else "")}
+             for u, ok, _t, why in results]
     if not verified:
         return {"url": "", "name": proper, "reason": "", "title": "", "alternatives": [], "tried": tried}
     best = verified[0]
