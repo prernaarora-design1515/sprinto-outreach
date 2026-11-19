@@ -237,7 +237,7 @@ professor's rules.
 | Area | Status |
 |---|---|
 | Scraper on real sites (Stripe, Chargebee, Postman; Sprinto → 403) | ✅ tested live |
-| Evidence Map rules, quote verification, agent limits, storage | ✅ 56 offline unit tests (`python -m unittest discover -s tests -t .`) |
+| Evidence Map rules, quote verification, agent limits, storage | ✅ 54 offline unit tests (`python -m unittest discover -s tests -t .`) |
 | Agent loop on real sites with the **mock** AI | ✅ ran (Chargebee, Postman) |
 | Claude API | ⚠️ request format checked with a fake client only. **Not tested live**: no `ANTHROPIC_API_KEY` |
 | Gemini API | ✅ key and model checked live; one structured test call succeeded. Request format, error handling and provider switch are also unit-tested |
