@@ -42,9 +42,17 @@ Python loads `pandas`.
 | `LLM_PROVIDER` | `auto` (Claude if its key is set, else Gemini, else mock), `claude`, `gemini` or `mock` | — |
 | `HUNTER_API_KEY` | Contact finding (Domain Search) | hunter.io → API keys |
 | `TEST_RECIPIENT_EMAIL` | **The only address the app will ever send to** — your own | — |
-| `credentials.json` file | Gmail API OAuth | Google Cloud Console (steps below) |
+| `RESEND_API_KEY` | Test email via Resend (simplest option) | resend.com → API Keys, permission **Sending access**. Sign up with the same address as `TEST_RECIPIENT_EMAIL` |
+| `EMAIL_PROVIDER` | `auto` (Resend if its key is set, else Gmail), `resend` or `gmail` | — |
+| `credentials.json` file | Test email via the Gmail API (OAuth) | Google Cloud Console (steps below) |
 
-**Gmail setup (one time):**
+**Test email sender.** The brief names the Gmail API. Resend was added as an alternative
+because Google Cloud's OAuth setup failed on the school account. Both senders follow the same
+rules: the recipient is locked to `TEST_RECIPIENT_EMAIL`, nothing is sent without the
+approval tick, and the subject starts with `[TEST]`. Without your own domain, Resend can
+only deliver to the address you signed up with, which is a second safety lock.
+
+**Gmail setup (one time, only if you use Gmail):**
 1. In Google Cloud Console, create a project and enable the **Gmail API**.
 2. Configure the OAuth consent screen (External, add yourself as a test user).
 3. Create credentials → **OAuth client ID** → **Desktop app**, then download the JSON
@@ -107,7 +115,7 @@ Streamlit, pandas and the Gmail libraries for local use.
 | 4 | Agent loop: fetch missing evidence | `agent.py`, `links.py` | **Claude** recommends a page; **code** enforces the limits |
 | 5 | Find a decision-maker | `contacts.py` (Hunter.io Domain Search) | code ranks job titles |
 | 6 | Draft a personalised email | `email_writer.py` | **Claude** writes; **code** checks the evidence |
-| 7 | Send a test email to your inbox | `gmail_sender.py` | **you** approve; code locks the recipient |
+| 7 | Send a test email to your inbox | `email_sender.py` → `resend_sender.py` or `gmail_sender.py` | **you** approve; code locks the recipient |
 
 Supporting files:
 - `config.py`: settings and limits.
@@ -226,14 +234,15 @@ professor's rules.
 | Area | Status |
 |---|---|
 | Scraper on real sites (Stripe, Chargebee, Postman; Sprinto → 403) | ✅ tested live |
-| Evidence Map rules, quote verification, agent limits, storage | ✅ 43 offline unit tests (`python -m unittest discover -s tests -t .`) |
+| Evidence Map rules, quote verification, agent limits, storage | ✅ 48 offline unit tests (`python -m unittest discover -s tests -t .`) |
 | Agent loop on real sites with the **mock** AI | ✅ ran (Chargebee, Postman) |
 | Claude API | ⚠️ request format checked with a fake client only. **Not tested live**: no `ANTHROPIC_API_KEY` |
 | Gemini API | ✅ key and model checked live; one structured test call succeeded. Request format, error handling and provider switch are also unit-tested |
 | Hunter.io | ⚠️ key authenticates live, but the free monthly quota is used up (resets 3 Dec 2026), so the app shows a quota error. Response parsing is tested with a sample payload |
 | Apollo.io | ⚠️ key checked live (health endpoint). **Not wired into the app**: the free plan locks the people search and email endpoints |
 | Vercel deployment | ✅ builds from GitHub `main`; the page and `/health` respond |
-| Gmail | ⚠️ safety rules tested with a fake Gmail service. **Not tested live**: needs OAuth setup and your approval |
+| Resend | ⚠️ safety rules tested with a fake HTTP client (5 tests). **Not tested live yet** |
+| Gmail | ⚠️ safety rules tested with a fake Gmail service. **Not tested live**: the OAuth consent screen could not be created on the school's Google account |
 
 ---
 

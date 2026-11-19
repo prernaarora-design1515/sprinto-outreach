@@ -12,7 +12,7 @@ import streamlit as st
 import config
 import db
 from demo_sites import DEMO_COMPANIES, DemoFetcher
-from gmail_sender import GmailError, check_ready, send_test_email
+from email_sender import SendError, check_ready, provider, send_test_email
 from llm import get_llm
 from pipeline import run_outreach, run_research
 
@@ -111,24 +111,25 @@ def show_outreach(outreach, research):
             e = ev.get(i)
             st.caption(f"{i}: \"{e['quote']}\" ({e['kind']}, {e['source_url']})" if e else f"{i}: ⚠ unknown ID")
 
-    st.subheader("Send TEST email (Gmail)")
+    service = "Resend" if provider() == "resend" else "Gmail"
+    st.subheader(f"Send TEST email ({service})")
     problems = check_ready()
     if problems:
         for pr in problems:
             st.info(pr)
-        st.caption("Sending is disabled until Gmail is configured (see README).")
+        st.caption("Sending is disabled until it is configured (see README).")
         return
     st.write(f"Recipient (fixed): **{config.TEST_RECIPIENT_EMAIL}** — the prospect is never emailed.")
     approved = st.checkbox(f"I approve sending this draft as a TEST to my own inbox "
                            f"({config.TEST_RECIPIENT_EMAIL}).", key="approve_send")
     if st.button("Send test email", disabled=not (approved and draft.body.strip())):
         try:
-            msg_id = send_test_email(draft, research.company_url, approved=approved)
+            used, msg_id = send_test_email(draft, research.company_url, approved=approved)
             if outreach.get("email_id"):
                 with closing(db.connect()) as conn:
                     db.mark_email_sent(conn, outreach["email_id"], config.TEST_RECIPIENT_EMAIL)
-            st.success(f"Test email sent to {config.TEST_RECIPIENT_EMAIL} (Gmail id {msg_id}).")
-        except GmailError as e:
+            st.success(f"Test email sent to {config.TEST_RECIPIENT_EMAIL} via {used} (id {msg_id}).")
+        except SendError as e:
             st.error(str(e))
 
 

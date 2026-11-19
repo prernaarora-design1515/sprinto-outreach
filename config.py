@@ -43,6 +43,12 @@ TEST_RECIPIENT_EMAIL = _get("TEST_RECIPIENT_EMAIL")
 GMAIL_CREDENTIALS_FILE = _get("GMAIL_CREDENTIALS_FILE", "credentials.json")
 GMAIL_TOKEN_FILE = _get("GMAIL_TOKEN_FILE", "token.json")
 
+# --- Resend (alternative to Gmail for the TEST email) ---
+# EMAIL_PROVIDER: auto (Resend if RESEND_API_KEY is set, else Gmail) | resend | gmail
+EMAIL_PROVIDER = _get("EMAIL_PROVIDER", "auto").lower()
+RESEND_API_KEY = _get("RESEND_API_KEY")
+RESEND_FROM = _get("RESEND_FROM", "Sprinto Outreach Test <onboarding@resend.dev>")
+
 # --- Hosting ---
 # Vercel sets VERCEL=1. There the project folder is read-only, so SQLite lives in /tmp
 # (temporary: it is wiped whenever Vercel starts a fresh instance).
@@ -90,9 +96,13 @@ def mode_summary():
     return {
         "AI (extraction & email)": ai,
         "Hunter.io (contacts)": "LIVE" if use_hunter() else "MOCK - fake demo contacts, no API key",
-        "Gmail (test send)": (
-            f"configured - sends only to {TEST_RECIPIENT_EMAIL}"
-            if TEST_RECIPIENT_EMAIL and os.path.exists(GMAIL_CREDENTIALS_FILE)
-            else "NOT configured - sending disabled"
-        ),
+        "Test email": _email_mode(),
     }
+
+
+def _email_mode():
+    from email_sender import check_ready, provider   # local import avoids a cycle
+    name = "Resend" if provider() == "resend" else "Gmail"
+    if check_ready():
+        return f"NOT configured - {name} sending disabled"
+    return f"configured - {name}, sends only to {TEST_RECIPIENT_EMAIL}"
