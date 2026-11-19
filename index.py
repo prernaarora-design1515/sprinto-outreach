@@ -16,6 +16,7 @@ Local run:  python index.py   ->  http://localhost:5000
 import hashlib
 import hmac
 from contextlib import closing
+from datetime import datetime, timedelta, timezone
 
 from flask import Flask, redirect, render_template_string, request, session, url_for
 
@@ -23,6 +24,8 @@ import blob_db
 import config
 import db
 from demo_sites import DEMO_COMPANIES, DemoFetcher
+from email_sender import SendError, check_ready, provider, send_test_email
+from email_writer import EmailDraft
 from llm import LLMError, get_llm
 from pipeline import run_outreach, run_research
 from web_page import PAGE   # the page design lives in web_page.py
@@ -61,8 +64,22 @@ def logout():
     return redirect(url_for("login"))
 
 
+def mask(addr):
+    """Show test addresses without exposing them on a public page: pr•••@pg27•••.co"""
+    name, _, domain = addr.partition("@")
+    host, _, tld = domain.rpartition(".")
+    return f"{name[:2]}•••@{host[:4]}•••.{tld}"
+
+
+def send_options():
+    """Web sending works only with Resend (Gmail needs a local browser sign-in)."""
+    if provider() != "resend" or check_ready():
+        return []
+    return [mask(e) for e in config.test_recipients()]
+
+
 def common():
-    return {"modes": config.mode_summary(), "on_vercel": config.ON_VERCEL,
+    return {"modes": config.mode_summary(), "on_vercel": config.ON_VERCEL, "send_to": send_options(),
             "limits": (config.MAX_EXTRA_FETCHES, config.MAX_STAGE_FETCHES),
             "demos": list(DEMO_COMPANIES), "has_password": bool(config.APP_PASSWORD)}
 
@@ -127,6 +144,51 @@ def run():
                                   outreach=outreach, evidence=evidence,
                                   findings=[f.to_dict() for f in research.findings] if research else [],
                                   **common())
+
+
+@app.route("/send", methods=["POST"])
+def send():
+    """Send a SAVED draft as a TEST to a configured recipient, after the approval tick."""
+    blocked = guard()
+    if blocked:
+        return blocked
+    message, ok = "", False
+    try:
+        email_id = int(request.form.get("email_id", "0"))
+        index = int(request.form.get("to", "0"))
+    except ValueError:
+        email_id, index = 0, -1
+    recipients = config.test_recipients()
+    if not request.form.get("approve"):
+        message = "Not sent: tick the approval box first."
+    elif not 0 <= index < len(recipients) or not send_options():
+        message = "Not sent: test sending is not configured."
+    else:
+        blob_db.pull()
+        with closing(db.connect()) as conn:
+            saved = db.get_email_for_sending(conn, email_id)
+            hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(timespec="seconds")
+            if not saved:
+                message = "Not sent: draft not found (run the company again)."
+            elif saved["email"]["sent_at"]:
+                message = "Not sent: this draft was already sent once. Run the company again for a new draft."
+            elif db.sent_since(conn, hour_ago) >= config.MAX_WEB_SENDS_PER_HOUR:
+                message = "Not sent: the hourly test-email limit is reached. Try again later."
+            else:
+                e, c = saved["email"], saved["contact"]
+                draft = EmailDraft(mode=e["mode"], subject=e["subject"], body=e["body"], status=e["status"],
+                                   contact={"full_name": c.get("name"), "email": c.get("email"),
+                                            "position": c.get("position"), "is_mock": bool(c.get("is_mock"))})
+                try:
+                    _, msg_id = send_test_email(draft, saved["run"].get("company_url", ""), approved=True,
+                                                recipient=recipients[index])
+                    db.mark_email_sent(conn, email_id, recipients[index])
+                    message, ok = f"Test email sent to {mask(recipients[index])} (id {msg_id}).", True
+                except SendError as err:
+                    message = str(err)
+        if ok:
+            blob_db.push()
+    return render_template_string(PAGE, view="sent", message=message, ok=ok, **common())
 
 
 @app.route("/history")

@@ -44,6 +44,10 @@ APOLLO_API_KEY = _get("APOLLO_API_KEY")
 # --- Gmail (sending the TEST email) ---
 # The ONLY address the app will ever send to. Set it to your own inbox.
 TEST_RECIPIENT_EMAIL = _get("TEST_RECIPIENT_EMAIL")
+# Optional extra TEST recipients (comma-separated), e.g. a professor who wants to see the
+# email. Only these configured addresses can ever be chosen - nobody can type an address.
+EXTRA_TEST_RECIPIENTS = [e.strip() for e in _get("EXTRA_TEST_RECIPIENTS").split(",") if "@" in e]
+MAX_WEB_SENDS_PER_HOUR = int(_get("MAX_WEB_SENDS_PER_HOUR", "10"))
 GMAIL_CREDENTIALS_FILE = _get("GMAIL_CREDENTIALS_FILE", "credentials.json")
 GMAIL_TOKEN_FILE = _get("GMAIL_TOKEN_FILE", "token.json")
 
@@ -67,6 +71,12 @@ DATABASE_PATH = _get("DATABASE_PATH", "/tmp/outreach.db" if ON_VERCEL else "outr
 MAX_EXTRA_FETCHES = 4      # pages fetched beyond the homepage
 MAX_STAGE_FETCHES = 2      # of those, pages fetched to find stage evidence
 PAGE_MAX_TOKENS = 2000     # size limit for each page's cleaned text
+
+
+def test_recipients():
+    """Every address a TEST email may go to: yours first, then the configured extras."""
+    out = [TEST_RECIPIENT_EMAIL] if "@" in TEST_RECIPIENT_EMAIL else []
+    return out + [e for e in EXTRA_TEST_RECIPIENTS if e.lower() not in {x.lower() for x in out}]
 
 
 def llm_provider():
@@ -109,4 +119,5 @@ def _email_mode():
     name = "Resend" if provider() == "resend" else "Gmail"
     if check_ready():
         return f"NOT configured - {name} sending disabled"
-    return f"configured - {name}, sends only to {TEST_RECIPIENT_EMAIL}"
+    n = len(test_recipients())
+    return f"configured - {name}, sends only to {n} configured test address{'es' if n > 1 else ''}"

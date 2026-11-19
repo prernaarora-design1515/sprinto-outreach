@@ -121,6 +121,21 @@ def mark_email_sent(conn, email_id, recipient):
     conn.commit()
 
 
+def get_email_for_sending(conn, email_id):
+    """The saved draft plus its run and chosen contact, or None."""
+    e = conn.execute("SELECT * FROM emails WHERE id=?", (email_id,)).fetchone()
+    if not e:
+        return None
+    run = conn.execute("SELECT * FROM runs WHERE id=?", (e["run_id"],)).fetchone()
+    c = conn.execute("SELECT * FROM contacts WHERE run_id=? AND chosen=1 ORDER BY id LIMIT 1",
+                     (e["run_id"],)).fetchone()
+    return {"email": dict(e), "run": dict(run) if run else {}, "contact": dict(c) if c else {}}
+
+
+def sent_since(conn, iso_time):
+    return conn.execute("SELECT COUNT(*) FROM emails WHERE sent_at >= ?", (iso_time,)).fetchone()[0]
+
+
 def list_runs(conn, limit=50):
     return [dict(r) for r in conn.execute(
         "SELECT id, started_at, company_url, status, rank, llm_mode, stop_reason"

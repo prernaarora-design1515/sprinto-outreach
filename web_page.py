@@ -182,6 +182,7 @@ pre{white-space:pre-wrap;background:var(--bg2);border:1px solid var(--line);padd
 .mail .hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
 .mail .hd span{color:var(--mute);font-size:12.5px} .mail .bd{padding:18px;white-space:pre-wrap;font-size:14.5px;line-height:1.7}
 .pain{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.sendbox{margin-top:18px;padding:18px;border:1px solid var(--line2);border-radius:16px;background:var(--card2)}
 .pain>li{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:14px 16px;transition:transform .35s var(--spring),border-color .3s}
 .pain>li:hover{transform:translateX(4px);border-color:var(--line2)}
 .pain ul{margin:8px 0 0;padding-left:18px;color:var(--mute);font-size:13px}
@@ -285,6 +286,11 @@ Evidence Map: certified → disqualify · not B2B SaaS → disqualify, unclear �
 {% else %}<form method="post"><div class="field"><input type="password" name="password" placeholder="App password" autofocus required></div>
 {% if error %}<div class="box bad">{{ error }}</div>{% endif %}<button class="btn" data-sound="click">Sign in <span class="arr">→</span></button></form>{% endif %}</div>
 
+{% elif view == 'sent' %}
+<div class="card reveal" style="max-width:560px;margin:12vh auto 0"><h2><span class="num">{{ '✓' if ok else '!' }}</span>{{ 'Test email sent' if ok else 'Not sent' }}</h2>
+<div class="box {{ 'ok' if ok else 'warn' }}">{{ message }}</div>
+<p><a class="btn ghost" href="/" data-sound="click">Run another company <span class="arr">→</span></a></p></div>
+
 {% elif view == 'history' %}
 <div class="eyebrow reveal"><span class="num">H</span>Saved runs</div>
 <div class="card reveal"><h2>Recent runs</h2>
@@ -363,7 +369,19 @@ Evidence Map: certified → disqualify · not B2B SaaS → disqualify, unclear �
 <h3>Pain points and their evidence</h3><ul class="pain">
 {% for p in e.pain_points %}<li><b>{{ p.pain_point }}</b> <span class="mute">— {{ p.reasoning }}</span><ul>
 {% for i in p.evidence_ids %}{% set ev = evidence.get(i) %}<li>{% if ev %}<span class="mono">{{ i }}</span>: "{{ ev.quote }}" ({{ ev.kind }}, {{ ev.source_url }}){% else %}{{ i }}: ⚠ unknown ID{% endif %}</li>{% endfor %}</ul></li>{% endfor %}</ul>
-<div class="box warn" style="margin-top:14px">Not sent. {% if on_vercel %}Sending is off in the hosted version; use the local app (streamlit_app.py) to send a TEST to your own inbox after approval.{% else %}Use the local Streamlit app to send a TEST to your own inbox after approval.{% endif %}</div>
+{% if send_to and outreach.get('email_id') %}
+<form method="post" action="/send" class="sendbox">
+  <input type="hidden" name="email_id" value="{{ outreach.email_id }}">
+  <h3 style="margin-top:0">Send this draft as a TEST</h3>
+  <p class="mute" style="margin-top:-4px">Goes only to a configured test address. The prospect is never emailed. One send per draft.</p>
+  <label class="field"><span>Send to</span><select name="to">{% for m in send_to %}<option value="{{ loop.index0 }}">{{ m }}</option>{% endfor %}</select></label>
+  <label class="toggle"><input type="checkbox" name="approve" value="1" required data-sound="toggle">
+    <span>I approve sending this draft as a TEST email<small>Subject starts with [TEST]; the intended prospect is shown inside, not emailed.</small></span></label>
+  <button class="btn" data-sound="click">Send test email <span class="arr">→</span></button>
+</form>
+{% else %}
+<div class="box warn" style="margin-top:14px">Not sent. Test sending is not configured on this server.</div>
+{% endif %}
 {% endif %}</div>
 {% endif %}
 {% endif %}

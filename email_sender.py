@@ -29,9 +29,14 @@ def check_ready():
     return _module().check_ready()
 
 
-def send_test_email(draft, company_url, approved=False):
+def send_test_email(draft, company_url, approved=False, recipient=None):
     """Returns (provider, message id). Raises SendError with a readable message."""
     try:
-        return provider(), _module().send_test_email(draft, company_url, approved=approved)
+        if provider() == "resend":
+            return "resend", resend_sender.send_test_email(draft, company_url, approved=approved,
+                                                           recipient=recipient)
+        if recipient and recipient.lower() != config.TEST_RECIPIENT_EMAIL.lower():
+            raise SendError("Gmail sends only to TEST_RECIPIENT_EMAIL.")
+        return "gmail", gmail_sender.send_test_email(draft, company_url, approved=approved)
     except (gmail_sender.GmailError, resend_sender.ResendError) as e:
         raise SendError(str(e))

@@ -48,8 +48,11 @@ def _explain(status, detail):
     return f"Resend error (HTTP {status}): {detail}"
 
 
-def send_test_email(draft, company_url, approved=False, http=requests):
-    """Send `draft` to YOUR inbox only. Returns the Resend message id."""
+def send_test_email(draft, company_url, approved=False, http=requests, recipient=None):
+    """
+    Send `draft` as a TEST. The recipient is your address, or one of the extra test
+    addresses configured in EXTRA_TEST_RECIPIENTS - never anything else. Returns the id.
+    """
     if not approved:
         raise ResendError("Not sent: explicit approval is required.")
     problems = check_ready()
@@ -58,10 +61,13 @@ def send_test_email(draft, company_url, approved=False, http=requests):
     if not draft.body.strip():
         raise ResendError("Not sent: the draft is empty.")
 
-    msg = build_test_message(draft, company_url)
-    recipient = config.TEST_RECIPIENT_EMAIL
+    recipient = recipient or config.TEST_RECIPIENT_EMAIL
+    allowed = {e.lower() for e in config.test_recipients()}
+    if recipient.lower() not in allowed:
+        raise ResendError("Not sent: that address is not a configured test recipient.")
+    msg = build_test_message(draft, company_url, to=recipient)
     if msg["To"] != recipient:                              # belt-and-braces check
-        raise ResendError("Not sent: recipient is not the configured test address.")
+        raise ResendError("Not sent: recipient mismatch.")
     payload = {"from": config.RESEND_FROM, "to": [recipient],
                "subject": msg["Subject"], "text": msg.get_content()}
     try:

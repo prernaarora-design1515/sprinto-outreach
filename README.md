@@ -90,8 +90,12 @@ Vercel runs short-lived serverless functions, so Streamlit can't run there. `ind
 a small Flask version that reuses exactly the same pipeline code. Differences:
 
 - Research and outreach run in **one request**, up to 300 seconds (`vercel.json`).
-- **Gmail sending is switched off** on Vercel, because the OAuth sign-in needs a local
-  browser. Drafts are shown for review; send tests from the local Streamlit app.
+- **Test emails can be sent from the web app with Resend** (Gmail is local-only because its
+  OAuth sign-in needs a browser). Only saved drafts can be sent, only after the approval
+  tick, only to `TEST_RECIPIENT_EMAIL` or the addresses in `EXTRA_TEST_RECIPIENTS` (shown
+  masked, nobody can type an address), once per draft, at most `MAX_WEB_SENDS_PER_HOUR`
+  per hour. The prospect is never emailed. Resend's free test sender only delivers to your
+  Resend account address; other recipients need a domain verified in Resend.
 - SQLite lives in `/tmp`. To keep History between visits, connect a **Vercel Blob** store
   to the project (Storage → Create → Blob). `blob_db.py` then loads the SQLite file before
   saving a run and uploads it afterwards. Without a Blob store, History is temporary.
@@ -248,7 +252,7 @@ professor's rules.
 | Area | Status |
 |---|---|
 | Scraper on real sites (Stripe, Chargebee, Postman; Sprinto → 403) | ✅ tested live |
-| Evidence Map rules, quote verification, agent limits, storage | ✅ 57 offline unit tests (`python -m unittest discover -s tests -t .`) |
+| Evidence Map rules, quote verification, agent limits, storage | ✅ 61 offline unit tests (`python -m unittest discover -s tests -t .`) |
 | Agent loop on real sites with the **mock** AI | ✅ ran (Chargebee, Postman) |
 | Claude API | ⚠️ request format checked with a fake client only. **Not tested live**: no `ANTHROPIC_API_KEY` |
 | Gemini API | ✅ full research + email draft run live (LedgerLoop → QUALIFIED A), with automatic fallback when the main model was overloaded. Request format, error handling and provider switch are also unit-tested |
