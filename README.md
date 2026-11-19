@@ -105,7 +105,12 @@ Streamlit, pandas and the Gmail libraries for local use.
 
 ---
 
-## 3. Architecture — the seven steps
+## 3. Architecture
+
+![Components map](docs/components_map.png)
+
+Components map: [docs/components_map.png](docs/components_map.png) (source: `docs/components_map.html`).
+ — the seven steps
 
 | # | Step | File | Who decides |
 |---|---|---|---|
