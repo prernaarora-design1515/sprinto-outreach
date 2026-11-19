@@ -23,9 +23,11 @@ from flask import Flask, redirect, render_template_string, request, session, url
 import blob_db
 import config
 import db
+from company_lookup import find_company, looks_like_url
 from demo_sites import DEMO_COMPANIES, DemoFetcher
 from email_sender import SendError, check_ready, provider, send_test_email
 from email_writer import EmailDraft
+from insights import company_insights, history_insights
 from llm import LLMError, get_llm
 from pipeline import run_outreach, run_research
 from web_page import PAGE   # the page design lives in web_page.py
@@ -78,8 +80,17 @@ def send_options():
     return [mask(e) for e in config.test_recipients()]
 
 
+def recent_runs():
+    """History numbers for the home page and the ticker (never breaks the page)."""
+    try:
+        with closing(db.connect()) as conn:
+            return history_insights(db.list_runs(conn, limit=200))
+    except Exception:
+        return history_insights([])
+
+
 def common():
-    return {"modes": config.mode_summary(), "on_vercel": config.ON_VERCEL, "send_to": send_options(),
+    return {"modes": config.mode_summary(), "stats": recent_runs(), "on_vercel": config.ON_VERCEL, "send_to": send_options(),
             "limits": (config.MAX_EXTRA_FETCHES, config.MAX_STAGE_FETCHES),
             "demos": list(DEMO_COMPANIES), "has_password": bool(config.APP_PASSWORD)}
 
@@ -95,7 +106,11 @@ def guard():
 # ------------------------------------------------------------------- pages --
 @app.route("/")
 def home():
-    return guard() or render_template_string(PAGE, view="form", form={}, **common())
+    blocked = guard()
+    if blocked:
+        return blocked
+    blob_db.pull()                         # so the home page shows everyone's saved runs
+    return render_template_string(PAGE, view="form", form={}, **common())
 
 
 @app.route("/run", methods=["POST"])
@@ -104,8 +119,8 @@ def run():
     if blocked:
         return blocked
     form = request.form
-    if form.get("source") == "demo":
-        label = form.get("demo", "")
+    if form.get("demo_pick") or form.get("source") == "demo":
+        label = form.get("demo_pick") or form.get("demo", "")
         if label not in DEMO_COMPANIES:
             return redirect(url_for("home"))
         url, fetch = DEMO_COMPANIES[label], DemoFetcher()
@@ -114,9 +129,18 @@ def run():
         if not url:
             return redirect(url_for("home"))
 
-    error, research, outreach = "", None, None
+    error, research, outreach, lookup = "", None, None, None
     try:
         llm = get_llm()
+        if fetch is None and not looks_like_url(url):
+            # A company name, not a URL: AI suggests the website, code verifies it.
+            lookup = find_company(url, llm)
+            if not lookup["url"]:
+                blob_db.pull()
+                return render_template_string(PAGE, view="form", form=form, lookup=lookup,
+                                              error=f"Couldn't verify a website for “{url}”. Paste its URL instead.",
+                                              **common())
+            url = lookup["url"]
         # Run first, save afterwards: the saved history is loaded right before writing, so
         # another visitor's run that finished in the meantime is kept (Vercel Blob).
         research, _ = run_research(url, llm=llm, fetch=fetch)
@@ -140,7 +164,9 @@ def run():
     evidence = {}
     if outreach and outreach.get("email"):
         evidence = {e["id"]: e for e in outreach["email"].evidence}
+    info = company_insights(research) if research else None
     return render_template_string(PAGE, view="result", form=form, error=error, research=research,
+                                  info=info, lookup=lookup,
                                   outreach=outreach, evidence=evidence,
                                   findings=[f.to_dict() for f in research.findings] if research else [],
                                   **common())

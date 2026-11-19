@@ -134,6 +134,11 @@ Supporting files:
 - `pipeline.py`: connects the steps and runs from the command line.
 - `streamlit_app.py`: the Streamlit interface (local).
 - `index.py`: the Flask web interface used on Vercel.
+- `company_lookup.py`: search by company name ("boat" → boat-lifestyle.com). The AI suggests
+  websites; code accepts one only if the page loads and the company name is in its title
+  or text (parked domains rejected). Nothing verified → the app asks for the URL.
+- `insights.py`: turns a run into signals, evidence quality, research budget and an agent
+  timeline for the page, using only verified findings. Display only.
 - `web_page.py`: its page design. Dark by default with a light toggle, hover effects,
   motion (animated orb, scroll reveals) and optional interface sounds made with the Web
   Audio API. It respects "reduce motion" settings and changes no behaviour.
@@ -252,7 +257,7 @@ professor's rules.
 | Area | Status |
 |---|---|
 | Scraper on real sites (Stripe, Chargebee, Postman; Sprinto → 403) | ✅ tested live |
-| Evidence Map rules, quote verification, agent limits, storage | ✅ 61 offline unit tests (`python -m unittest discover -s tests -t .`) |
+| Evidence Map rules, quote verification, agent limits, storage | ✅ 65 offline unit tests (`python -m unittest discover -s tests -t .`) |
 | Agent loop on real sites with the **mock** AI | ✅ ran (Chargebee, Postman) |
 | Claude API | ⚠️ request format checked with a fake client only. **Not tested live**: no `ANTHROPIC_API_KEY` |
 | Gemini API | ✅ full research + email draft run live (LedgerLoop → QUALIFIED A), with automatic fallback when the main model was overloaded. Request format, error handling and provider switch are also unit-tested |
